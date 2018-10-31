@@ -72,7 +72,7 @@ function organize(files) {
 			continue
 		}
 	}
-	return files.map(wrap)
+	return files
 }
 
 const api = /*js*/`
@@ -95,14 +95,14 @@ const declare = new Proxy(__deps,{
 
 function compile(dirPath) {
 	const files = readdir(dirPath)
-	const code = organize(files)
+	const code = organize(files).map(wrap).join('')
 	const setup = api.split('\n').join('')
 	return (
 		''.padStart(40, '\t') + 
-		'/*__COMP*/void function(){\'use strict\';' + setup + code.join('') + 
+		'/*__COMP*/void function(){\'use strict\';' + setup + code + 
 		'\n' + ''.padStart(40, '\t') + '}()'
 	)
 }
 
-const cwd = process.cwd()
-writeFileSync(join(cwd, '..', basename(cwd) + '.compiled.js'), compile(cwd))
+const targetDir = join(process.cwd(), (process.argv[2] || ''))
+writeFileSync(join(targetDir, (basename(targetDir) + '.build.js')), compile(targetDir))

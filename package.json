@@ -1,0 +1,19 @@
+{
+  "name": "minbuild",
+  "version": "0.0.1",
+  "description": "A simple, predictable, build tool for frontend code.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ./ ./test-project"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weathergard/minbuild.git"
+  },
+  "author": "Jeff McMahan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/weathergard/minbuild/issues"
+  },
+  "homepage": "https://github.com/weathergard/minbuild#readme"
+}
