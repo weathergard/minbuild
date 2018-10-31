@@ -1,6 +1,6 @@
 # MinBuild
 
-Compile frontend javascript from separate files using ordinary property get/set syntax. Configuration is neither necessary nor possible. Code is wrapped but not otherwise altered. The output is readable and debug-friendly. Here's what it looks like:
+Bundle frontend javascript from separate files using ordinary property get/set syntax. Configuration is neither necessary nor possible. Code is wrapped but not otherwise altered. The output is readable and debug-friendly. Here's what it looks like:
 
 ```js
 const foo = include.foo
