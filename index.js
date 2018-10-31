@@ -1,17 +1,85 @@
 'use strict'
 
+// Todo: Handle escape sequences in string literals and handle regex literals.
 const {join, basename} = require('path')
 const {readdirSync, readFileSync, statSync, writeFileSync} = require('fs') 
 const files = []
+
+function parse(file) {
+	const model = {
+		declares: '',
+		includes: []
+	}
+	let pos = 0
+	const ln = file.length
+	while (pos < ln) {
+
+		// Comments
+		const next9 = file.slice(pos, pos + 9)
+		if (file.slice(pos,pos+2) === '//') {
+			pos++
+			pos += file.slice(pos).indexOf('\n') + 1
+			continue
+		}
+		if (file.slice(pos,pos+2) === '/*') {
+			pos++
+			pos += file.slice(pos).indexOf('*/') + 2
+			continue
+		}
+
+		// String literals
+		if (file[pos] === '"') {
+			pos++
+			pos += file.slice(pos).indexOf('"') + 1
+			continue
+		}
+		if (file[pos] === '\'') {
+			pos++
+			pos += file.slice(pos).indexOf('\'') + 1
+			continue
+		}
+		if (file[pos] === '`') {
+			pos++
+			pos += file.slice(pos).indexOf('`') + 1
+			continue
+		}
+		
+		if (/\bdeclare\.[a-zA-Z$_]/.test(next9)) {
+			const tail = file.slice(pos + 8)
+			const nameStr = tail.slice(0, tail.indexOf('=')).trim()
+			if (model.declares) {
+				throw new Error(
+					`Already declared ${model.declares}, then attempted to declare ${nameStr}.`
+				)
+			}
+			model.declares = nameStr
+			pos += 9
+			continue
+		}
+		if (/\binclude\.[a-zA-Z$_]/.test(next9)) {
+			const tail = file.slice(pos + 8)
+			const nameStr = tail.slice(0, tail.search(/[\s]/)).trim()
+			model.includes.push(nameStr)
+			pos += 9
+			continue
+		}
+		pos++
+	}
+	return model
+}
 
 // Recursively get all the files in the directory.
 function readdir(dirPath) {
 	readdirSync(dirPath).forEach(relPath => {
 		const contentAbsPath = join(dirPath, relPath)
 		if (statSync(contentAbsPath).isFile()) {
+			if (contentAbsPath.toLowerCase().slice(-3) !== '.js') {
+				return // Skip non-js files.
+			}
 			const content = readFileSync(contentAbsPath, 'utf8').trim()
 			if (!content.includes('const include=new Proxy(__deps,{')) {
-				files.push({content, name:getName(content), fpath:contentAbsPath})
+				const {declares, includes} = parse(content)
+				files.push({content, declares, includes, fpath:contentAbsPath})
 			}
 		} else {
 			readdir(contentAbsPath)
@@ -20,16 +88,9 @@ function readdir(dirPath) {
 	return files
 }
 
-// Find the name from an epression of the form: "declare.theName".
-function getName(fileContent) {
-	const tail = fileContent.split('declare.')[1] || 'anonymous/main'
-	const spacePos = tail.search(/[\s=]/)
-	return tail.slice(0, ~spacePos ? spacePos : tail.length)
-}
-
 // Wrap the code in a closure.
 function wrap(file) {
-	const name = file.name
+	const name = file.declares
 	const comment = '// ' + name + ' '
 	return (
 		';void function(){\n' + comment + '\n' +
@@ -40,35 +101,28 @@ function wrap(file) {
 // Filter out dead code.
 function removeNonIncluded(files) {
 	return files.filter(file => { // Drop files that are not needed.
-		const name = file.name
+		const name = file.declares || 'anonymous/main'
 		return (
 			(name === 'anonymous/main') ||
-			files.some(otherFile => otherFile.content.includes('include.' + name))
+			files.some(otherFile => otherFile.includes.includes(name))
 		)
-	})
-}
-
-// Do not tolerate multiple declare statements in a single file.
-function max1Declare(files) {
-	files.forEach(file => {
-		if (file.content.split('declare.').length > 2) {
-			throw new Error(`Multiple declare statements in: ...${file.fpath.slice(-20)}`)
-		}
 	})
 }
 
 // Resolve the dependencies to a plain serial order.
 function organize(files) {
-	max1Declare(files)
 	files = removeNonIncluded(files)
 	let count = 0
+	const limit = files.length**2
 	for (let defPos = 0; defPos < files.length; defPos++) { 
-		if (count > (files.length**2)) {
+		if (count > limit) {
 			throw new Error('Dependencies are circular.')
 		}
 		const definition = files[defPos]
-		const include = 'include.' + definition.name
-		if (files.some((file, includePos) => defPos > includePos && file.content.includes(include))) {
+		if (files.some((file, includePos) => (
+			defPos > includePos && 
+			file.includes.includes(definition.declares)
+		))) {
 			files.splice(defPos, 1)
 			files.splice(defPos - 1, 0, definition)
 			defPos = 0 // Start over.

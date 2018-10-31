@@ -23,12 +23,5 @@ declare.foo = function () {
 	bar()
 }
 
-																																								}();void function(){
-// anonymous/main 
-
-const foo = include.foo
-
-foo()
-
 																																								}()
 																																								}()
