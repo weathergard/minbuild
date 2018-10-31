@@ -2,7 +2,8 @@
   "name": "minbuild",
   "version": "0.1.0",
   "description": "A simple build tool for frontend code.",
-  "main": "index.js",
+  "main": "./index.js",
+  "bin": "./index.js",
   "scripts": {
     "test": "node ./ ./test-project && node ./tests"
   },
