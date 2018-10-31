@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 'use strict'
 
 // Todo: Handle escape sequences in string literals and handle regex literals.
