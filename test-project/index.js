@@ -10,6 +10,4 @@ const foo = include.foo
 
 /* declare.inAComment */
 
-var a = /declare.InARegex/
-
 foo()
