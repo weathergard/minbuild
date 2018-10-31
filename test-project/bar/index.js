@@ -1,5 +1,5 @@
-const baz = require.baz
+const baz = include.baz
 
 declare.bar = function () {
-	baz()
+	return baz()
 }

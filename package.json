@@ -4,7 +4,7 @@
   "description": "A simple, predictable, build tool for frontend code.",
   "main": "index.js",
   "scripts": {
-    "test": "node ./ ./test-project"
+    "test": "node ./ ./test-project && node ./tests"
   },
   "repository": {
     "type": "git",

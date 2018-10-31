@@ -1,10 +1,17 @@
-																																								/*__COMP*/void function(){'use strict';const __deps = {};const include = new Proxy(__deps,{	set: function(_,prop){throw new Error('Attempted to set property "' + prop  + '" on include.')},	get: function(target,prop){		if(prop in target){return target[prop]}		else{throw new Error(prop + ' has not been declared.')}	}});const declare = new Proxy(__deps,{	get: function (_,prop) {throw new Error('Attempted to read property "' + prop + '" from declare.')},	set: function (obj,prop,v) {		if(prop in obj){throw new Error(prop + ' has already been declared.')}		else{obj[prop]=v;return true}	}});;void function(){
+																																								void function(){'use strict';const __deps={};const include=new Proxy(__deps,{set:function(_,p){throw new Error('Attempted to set property "'+p+'" on include.')},get:function(t,p){if(p in t){return t[p]}else{throw new Error(p+' was not declared.')}}});const declare=new Proxy(__deps,{get:function(_,p){throw new Error('Attempted to read property "'+p+'" from declare.')},set:function(o,p,v){if(p in o){throw new Error(p+' was already declared.')}else{o[p]=v;return true}}});void function(){
+// baz 
+
+declare.baz = function () {
+	return 'Baz module executed.'
+}
+
+																																								}();void function(){
 // bar 
 
-const baz = require.baz
+const baz = include.baz
 
 declare.bar = function () {
-	baz()
+	return baz()
 }
 
 																																								}();void function(){

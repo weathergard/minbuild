@@ -1,3 +1,3 @@
-declare.baz = function() {
+declare.baz = function () {
 	return 'Baz module executed.'
 }

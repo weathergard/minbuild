@@ -10,8 +10,8 @@ function readdir(dirPath) {
 		const contentAbsPath = join(dirPath, relPath)
 		if (statSync(contentAbsPath).isFile()) {
 			const content = readFileSync(contentAbsPath, 'utf8').trim()
-			if (!content.includes('/*__COMP*/')) {
-				files.push({content, fpath: contentAbsPath})
+			if (!content.includes('const include=new Proxy(__deps,{')) {
+				files.push({content, name:getName(content), fpath:contentAbsPath})
 			}
 		} else {
 			readdir(contentAbsPath)
@@ -21,14 +21,15 @@ function readdir(dirPath) {
 }
 
 // Find the name from an epression of the form: "declare.theName".
-function getName(file) {
-	const tail = file.content.split('declare.')[1] || 'anonymous/main'
-	const spacePos = tail.search(/[\s;]/)
+function getName(fileContent) {
+	const tail = fileContent.split('declare.')[1] || 'anonymous/main'
+	const spacePos = tail.search(/[\s=]/)
 	return tail.slice(0, ~spacePos ? spacePos : tail.length)
 }
 
+// Wrap the code in a closure.
 function wrap(file) {
-	const name = getName(file) || 'main'
+	const name = file.name
 	const comment = '// ' + name + ' '
 	return (
 		';void function(){\n' + comment + '\n' +
@@ -36,34 +37,37 @@ function wrap(file) {
 	)
 }
 
+// Filter out dead code.
 function removeNonIncluded(files) {
 	return files.filter(file => { // Drop files that are not needed.
-		const name = getName(file)
+		const name = file.name
 		return (
-			name == 'anonymous/main' ||
+			(name === 'anonymous/main') ||
 			files.some(otherFile => otherFile.content.includes('include.' + name))
 		)
 	})
 }
 
+// Do not tolerate multiple declare statements in a single file.
 function max1Declare(files) {
-	files.forEach(file => { // 1 "declare" permitted per file.
+	files.forEach(file => {
 		if (file.content.split('declare.').length > 2) {
 			throw new Error(`Multiple declare statements in: ...${file.fpath.slice(-20)}`)
 		}
 	})
 }
 
+// Resolve the dependencies to a plain serial order.
 function organize(files) {
 	max1Declare(files)
 	files = removeNonIncluded(files)
-	let count = 0 // Resolve the dependency order.
+	let count = 0
 	for (let defPos = 0; defPos < files.length; defPos++) { 
-		if (count > (files.length * 100)) { // Obviously a hack.
-			throw new Error('Circular dependencies.')
+		if (count > (files.length**2)) {
+			throw new Error('Dependencies are circular.')
 		}
 		const definition = files[defPos]
-		const include = 'include.' + getName(definition)
+		const include = 'include.' + definition.name
 		if (files.some((file, includePos) => defPos > includePos && file.content.includes(include))) {
 			files.splice(defPos, 1)
 			files.splice(defPos - 1, 0, definition)
@@ -75,34 +79,37 @@ function organize(files) {
 	return files
 }
 
+// The static module API (included in the output).
 const api = /*js*/`
-const __deps = {};
-const include = new Proxy(__deps,{
-	set: function(_,prop){throw new Error('Attempted to set property "' + prop  + '" on include.')},
-	get: function(target,prop){
-		if(prop in target){return target[prop]}
-		else{throw new Error(prop + ' has not been declared.')}
+const __deps={};
+const include=new Proxy(__deps,{
+	set:function(_,p){throw new Error('Attempted to set property "'+p+'" on include.')},
+	get:function(t,p){
+		if(p in t){return t[p]}
+		else{throw new Error(p+' was not declared.')}
 	}
 });
-const declare = new Proxy(__deps,{
-	get: function (_,prop) {throw new Error('Attempted to read property "' + prop + '" from declare.')},
-	set: function (obj,prop,v) {
-		if(prop in obj){throw new Error(prop + ' has already been declared.')}
-		else{obj[prop]=v;return true}
+const declare=new Proxy(__deps,{
+	get:function(_,p){throw new Error('Attempted to read property "'+p+'" from declare.')},
+	set:function(o,p,v){
+		if(p in o){throw new Error(p+' was already declared.')}
+		else{o[p]=v;return true}
 	}
-});
+})
 `
 
+// Consume the JS files in the given directory to create a code bundle string.
 function compile(dirPath) {
 	const files = readdir(dirPath)
 	const code = organize(files).map(wrap).join('')
-	const setup = api.split('\n').join('')
+	const setup = api.split(/[\n\t]/).join('')
 	return (
 		''.padStart(40, '\t') + 
-		'/*__COMP*/void function(){\'use strict\';' + setup + code + 
+		'void function(){\'use strict\';' + setup + code + 
 		'\n' + ''.padStart(40, '\t') + '}()'
 	)
 }
 
+// Get the CLI argument and write an output file.
 const targetDir = join(process.cwd(), (process.argv[2] || ''))
 writeFileSync(join(targetDir, (basename(targetDir) + '.build.js')), compile(targetDir))
