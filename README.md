@@ -6,7 +6,7 @@ Compile frontend javascript from separate files using ordinary property get/set 
 const foo = include.foo
 
 declare.myModule = function () {
-	alert('Hello world!')
+    alert('Hello world!')
 }
 ```
 
