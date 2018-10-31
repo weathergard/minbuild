@@ -1,8 +1,8 @@
 # MinBuild
 
-Sometimes using tools like Webpack, Browserify, or whatever else, is sort of a bummer. Especially for smaller projects, or for code that you won't be keeping up with much (no one wants to fix a 4 year-old build configuation). Yet having the freedom to split frontend code into separate files is really nice. So here's a tool that's simple to the point of stupidity, which lets you create large structured codebases.
+Compile frontend javascript from separate files with ordinary get/set syntax. Code is wrapped with a light-touch, and is not otherwise altered; the output is readable and debug-friendly. Circularity is forbidden. 
 
-All of the module management is done via a single dependency object, accessed from the `include` and `declare` identifiers (declare these as globals in your linter).
+Here's what it looks like:
 
 ```js
 const foo = include.foo
@@ -13,10 +13,10 @@ declare.myModule = function () {
 }
 ```
 
-Don't use `declare` in your project's main file.
+It's all just object property assignment and lookup. Compile a project as follows:
 
 ```shell
-cd ~/myproject && minbuild
+minbuild ./my-project
 ```
 
-This will create a labelled, readable, debug-friendly output file called `myproject.compiled.js`.
+This creates a file at `./my-project/my-project.build.js`, containing the compiled output.
