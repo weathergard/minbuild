@@ -5,7 +5,7 @@ const {join, basename} = require('path')
 const {readFileSync, writeFileSync} = require('fs')
 const files = []
 const readdir = require('./read-all')(files)
-const api = (readFileSync('browser-api.js', 'utf8')).split(/[\n\t]/).join('')
+const api = (readFileSync(__dirname + '/browser-api.js', 'utf8')).split(/[\n\t]/).join('')
 
 // Wrap the code in a closure.
 function wrap(file) {
