@@ -1,96 +1,11 @@
 #!/usr/bin/env node
 'use strict'
 
-// Todo: regex literals containing "declare.foo" or "include.foo".
 const {join, basename} = require('path')
-const {readdirSync, readFileSync, statSync, writeFileSync} = require('fs') 
+const {readFileSync, writeFileSync} = require('fs')
 const files = []
-
-function parse(file) {
-	const model = {
-		declares: '',
-		includes: []
-	}
-	let pos = 0
-	const ln = file.length
-	while (pos < ln) {
-
-		// Comments
-		const next9 = file.slice(pos, pos + 9)
-		if (file.slice(pos,pos+2) === '//') {
-			pos++
-			pos += file.slice(pos).indexOf('\n') + 1
-			continue
-		}
-		if (file.slice(pos,pos+2) === '/*') {
-			pos++
-			pos += file.slice(pos).indexOf('*/') + 2
-			continue
-		}
-
-		const notEscaped = file[pos-1] !== '\\'
-
-		// String literals
-		if (file[pos] === '"' && notEscaped) {
-			pos++
-			pos += file.slice(pos).indexOf('"') + 1
-			continue
-		}
-		if (file[pos] === '\'' && notEscaped) {
-			pos++
-			pos += file.slice(pos).indexOf('\'') + 1
-			continue
-		}
-		if (file[pos] === '`' && notEscaped) {
-			pos++
-			pos += file.slice(pos).indexOf('`') + 1
-			continue
-		}
-		
-		if (/\bdeclare\.[a-zA-Z$_]/.test(next9)) {
-			const tail = file.slice(pos + 8)
-			const nameStr = tail.slice(0, tail.indexOf('=')).trim()
-			if (model.declares) {
-				throw new Error(
-					`Already declared ${model.declares}, then attempted to declare ${nameStr}.`
-				)
-			}
-			model.declares = nameStr
-			pos += 9
-			continue
-		}
-		if (/\binclude\.[a-zA-Z$_]/.test(next9)) {
-			const tail = file.slice(pos + 8)
-			const nameStr = tail.slice(0, tail.search(/[\s]/)).trim()
-			model.includes.push(nameStr)
-			pos += 9
-			continue
-		}
-		pos++
-	}
-	model.declares = model.declares || 'main'
-	return model
-}
-
-// Recursively get all the files in the directory.
-function readdir(dirPath) {
-	readdirSync(dirPath).forEach(relPath => {
-		const contentAbsPath = join(dirPath, relPath)
-		if (statSync(contentAbsPath).isFile()) {
-			if (contentAbsPath.toLowerCase().slice(-3) !== '.js') {
-				return // Skip non-js files.
-			}
-			const content = readFileSync(contentAbsPath, 'utf8').trim()
-			if (!content.includes('const include=new Proxy(__deps,{')) {
-				const {declares, includes} = parse(content)
-				files.push({content, declares, includes, fpath:contentAbsPath})
-			}
-		} else {
-			readdir(contentAbsPath)
-		}
-	})
-	return files
-}
+const readdir = require('./read-all')(files)
+const api = (readFileSync('browser-api.js', 'utf8')).split(/[\n\t]/).join('')
 
 // Wrap the code in a closure.
 function wrap(file) {
@@ -109,13 +24,31 @@ function removeNonIncluded(files) {
 	})
 }
 
-// Resolve the dependencies to a plain serial order.
+// Make sure all includes were declared; else throw.
+function everythingWasDeclared(files) {
+	const includes = []
+	const declared = []
+	files.forEach(f => (
+		includes.push(...f.includes),
+		declared.push(f.declares)
+	))
+	includes.forEach(include => {
+		if (!declared.includes(include)) {
+			throw new Error(`Attempted to include ${include} but it was never declared.`)
+		}
+	})
+}
+
+// Resolve the dependencies to a serial order.
 function organize(files) {
 	files = removeNonIncluded(files)
+	everythingWasDeclared(files)
 	let count = 0
 	const limit = files.length**2
-	for (let defPos = 0; defPos < files.length; defPos++) { 
+	for (let defPos = 0; defPos < files.length; defPos++) {
 		if (count > limit) {
+			// Todo: Record the sequence of dependencies, and use that to
+			// 		 produce a helpful message about fixing the circularity.
 			throw new Error('Dependencies are circular.')
 		}
 		const definition = files[defPos]
@@ -133,31 +66,11 @@ function organize(files) {
 	return files
 }
 
-// The static module API (included in the output).
-const api = /*js*/`
-const __deps={};
-const include=new Proxy(__deps,{
-	set:function(_,p){throw new Error('Attempted to set property "'+p+'" on include.')},
-	get:function(t,p){
-		if(p in t){return t[p]}
-		else{throw new Error(p+' was not declared.')}
-	}
-});
-const declare=new Proxy(__deps,{
-	get:function(_,p){throw new Error('Attempted to read property "'+p+'" from declare.')},
-	set:function(o,p,v){
-		if(p in o){throw new Error(p+' was already declared.')}
-		else{o[p]=v;return true}
-	}
-})
-`
-
 // Consume the JS files in the given directory to create a code bundle string.
 function compile(dirPath) {
 	const files = readdir(dirPath)
 	const code = organize(files).map(wrap).join('')
-	const setup = api.split(/[\n\t]/).join('')
-	return ';(function(){\'use strict\';' + setup + code + '})()'
+	return ';(function(){\'use strict\';' + api + code + '})()'
 }
 
 // Get the CLI argument and write an output file.
