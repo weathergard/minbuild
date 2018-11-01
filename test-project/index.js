@@ -1,6 +1,6 @@
 const foo = include.foo
 
-"declare.inAString"
+"decla\"re.inAString"
 
 'declare.inAString';
 

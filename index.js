@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict'
 
-// Todo: Handle escape sequences in string literals and handle regex literals.
+// Todo: regex literals containing "declare.foo" or "include.foo".
 const {join, basename} = require('path')
 const {readdirSync, readFileSync, statSync, writeFileSync} = require('fs') 
 const files = []
@@ -28,18 +28,20 @@ function parse(file) {
 			continue
 		}
 
+		const notEscaped = file[pos-1] !== '\\'
+
 		// String literals
-		if (file[pos] === '"') {
+		if (file[pos] === '"' && notEscaped) {
 			pos++
 			pos += file.slice(pos).indexOf('"') + 1
 			continue
 		}
-		if (file[pos] === '\'') {
+		if (file[pos] === '\'' && notEscaped) {
 			pos++
 			pos += file.slice(pos).indexOf('\'') + 1
 			continue
 		}
-		if (file[pos] === '`') {
+		if (file[pos] === '`' && notEscaped) {
 			pos++
 			pos += file.slice(pos).indexOf('`') + 1
 			continue
@@ -66,6 +68,7 @@ function parse(file) {
 		}
 		pos++
 	}
+	model.declares = model.declares || 'main'
 	return model
 }
 
@@ -91,20 +94,16 @@ function readdir(dirPath) {
 
 // Wrap the code in a closure.
 function wrap(file) {
-	const name = file.declares
-	const comment = '// ' + name + ' '
-	return (
-		';void function(){\n' + comment + '\n' +
-		`\n${file.content}\n\n` + ''.padStart(40, '\t') + '}()'
-	)
+	const code = file.content.split('\n').join('\n\t')
+	return `;(function(){\n\n\t//// Module: ${file.declares}\n\n\t${code}\n\n})()`
 }
 
 // Filter out dead code.
 function removeNonIncluded(files) {
 	return files.filter(file => { // Drop files that are not needed.
-		const name = file.declares || 'anonymous/main'
+		const name = file.declares
 		return (
-			(name === 'anonymous/main') ||
+			name === 'main' || 
 			files.some(otherFile => otherFile.includes.includes(name))
 		)
 	})
@@ -158,11 +157,7 @@ function compile(dirPath) {
 	const files = readdir(dirPath)
 	const code = organize(files).map(wrap).join('')
 	const setup = api.split(/[\n\t]/).join('')
-	return (
-		''.padStart(40, '\t') + 
-		'void function(){\'use strict\';' + setup + code + 
-		'\n' + ''.padStart(40, '\t') + '}()'
-	)
+	return ';(function(){\'use strict\';' + setup + code + '})()'
 }
 
 // Get the CLI argument and write an output file.

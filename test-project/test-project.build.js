@@ -1,44 +1,47 @@
-																																								void function(){'use strict';const __deps={};const include=new Proxy(__deps,{set:function(_,p){throw new Error('Attempted to set property "'+p+'" on include.')},get:function(t,p){if(p in t){return t[p]}else{throw new Error(p+' was not declared.')}}});const declare=new Proxy(__deps,{get:function(_,p){throw new Error('Attempted to read property "'+p+'" from declare.')},set:function(o,p,v){if(p in o){throw new Error(p+' was already declared.')}else{o[p]=v;return true}}});void function(){
-// baz 
+;(function(){'use strict';const __deps={};const include=new Proxy(__deps,{set:function(_,p){throw new Error('Attempted to set property "'+p+'" on include.')},get:function(t,p){if(p in t){return t[p]}else{throw new Error(p+' was not declared.')}}});const declare=new Proxy(__deps,{get:function(_,p){throw new Error('Attempted to read property "'+p+'" from declare.')},set:function(o,p,v){if(p in o){throw new Error(p+' was already declared.')}else{o[p]=v;return true}}});(function(){
 
-declare.baz = function () {
-	return 'Baz module executed.'
-}
+	//// Module: baz
 
-																																								}();void function(){
-// bar 
+	declare.baz = function () {
+		return 'Baz module executed.'
+	}
 
-const baz = include.baz
+})();(function(){
 
-declare.bar = function () {
-	return baz()
-}
+	//// Module: bar
 
-																																								}();void function(){
-// foo 
+	const baz = include.baz
+	
+	declare.bar = function () {
+		return baz()
+	}
 
-const bar = include.bar
+})();(function(){
 
-declare.foo = function () {
-	bar()
-}
+	//// Module: foo
 
-																																								}();void function(){
-//  
+	const bar = include.bar
+	
+	declare.foo = function () {
+		bar()
+	}
 
-const foo = include.foo
+})();(function(){
 
-"declare.inAString"
+	//// Module: main
 
-'declare.inAString';
+	const foo = include.foo
+	
+	"decla\"re.inAString"
+	
+	'declare.inAString';
+	
+	`declare.inAString`
+	
+	// declare.inAComment
+	
+	/* declare.inAComment */
+	
+	foo()
 
-`declare.inAString`
-
-// declare.inAComment
-
-/* declare.inAComment */
-
-foo()
-
-																																								}()
-																																								}()
+})()})()
