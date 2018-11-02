@@ -43,7 +43,7 @@ module.exports = function (file) {
 		
 		if (/\bdeclare\.[a-zA-Z$_]/.test(next9)) {
 			const tail = file.slice(pos + 8)
-			const nameStr = tail.slice(0, tail.indexOf('=')).trim()
+			const nameStr = tail.slice(0, tail.search(/[=]/)).trim()
 			if (model.declares) {
 				throw new Error(
 					`Already declared ${model.declares}, then attempted to declare ${nameStr}.`
@@ -55,7 +55,7 @@ module.exports = function (file) {
 		}
 		if (/\binclude\.[a-zA-Z$_]/.test(next9)) {
 			const tail = file.slice(pos + 8)
-			const nameStr = tail.slice(0, tail.search(/[\s]/)).trim()
+			const nameStr = tail.slice(0, tail.search(/[\s.]/)).trim()
 			model.includes.push(nameStr)
 			pos += 9
 			continue

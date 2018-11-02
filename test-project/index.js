@@ -1,4 +1,5 @@
 const foo = include.foo
+const fizzbuzz = include.fizz.buzz // Lets access a property of the include.
 
 "decla\"re.inAString"
 
@@ -10,4 +11,4 @@ const foo = include.foo
 
 /* declare.inAComment */
 
-foo()
+foo(fizzbuzz())

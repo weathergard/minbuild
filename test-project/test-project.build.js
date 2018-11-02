@@ -18,6 +18,14 @@
 
 })();(function(){
 
+	//// Module: fizz
+
+	declare.fizz = {
+		buzz: () => {}
+	}
+
+})();(function(){
+
 	//// Module: foo
 
 	const bar = include.bar
@@ -31,6 +39,7 @@
 	//// Module: main
 
 	const foo = include.foo
+	const fizzbuzz = include.fizz.buzz
 	
 	"decla\"re.inAString"
 	
@@ -42,6 +51,6 @@
 	
 	/* declare.inAComment */
 	
-	foo()
+	foo(fizzbuzz())
 
 })()})()
