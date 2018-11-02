@@ -39,7 +39,7 @@
 	//// Module: main
 
 	const foo = include.foo
-	const fizzbuzz = include.fizz.buzz
+	const fizzbuzz = include.fizz.buzz // Lets access a property of the include.
 	
 	"decla\"re.inAString"
 	
