@@ -2,9 +2,10 @@
 'use strict'
 
 const {join, basename} = require('path')
-const {readFileSync, writeFileSync} = require('fs')
-const files = []
-const readdir = require('./read-all')(files)
+const {readFileSync, writeFileSync, statSync} = require('fs')
+const readdir = require('./utils/read-all')
+const stripComments = require('./utils/strip-comments')
+const countLoc = require('./utils/count-loc')
 const api = (readFileSync(__dirname + '/browser-api.js', 'utf8')).split(/[\n\t]/).join('')
 
 // Wrap the code in a closure.
@@ -68,11 +69,34 @@ function organize(files) {
 
 // Consume the JS files in the given directory to create a code bundle string.
 function compile(dirPath) {
-	const files = readdir(dirPath)
-	const code = organize(files).map(wrap).join('')
-	return ';(function(){\'use strict\';' + api + code + '})()'
+	const files = organize(readdir(dirPath))
+	const code = files.map(wrap).join('')
+	return {
+		files,
+		code: ';(function(){\'use strict\';' + api + code + '})()'
+	}
 }
 
-// Get the CLI argument and write an output file.
-const targetDir = join(process.cwd(), (process.argv[2] || ''))
-writeFileSync(join(targetDir, (basename(targetDir) + '.build.js')), compile(targetDir))
+void function () {
+	// Determine the target directory.
+	const targetDir = join(process.cwd(), (process.argv[2] || ''))
+
+	// Compile the javascript files in the target dir.
+	let {files, code} = compile(targetDir)
+	if (process.argv[3] === '--remove-comments') {
+		code = stripComments(code)
+	}
+
+	// Build the output file name.
+	const fname = join(targetDir, (basename(targetDir) + '.build.js'))
+
+	// Write the code to file.
+	writeFileSync(fname, code)
+
+	// Report the results to the command line.
+	console.log(
+		`${basename(fname)} is ` +
+		`${(statSync(fname).size / 1024).toFixed(2)}KB from `+
+		`${files.length} files totaling ≈ ${countLoc(code)} SLOC.`
+	)
+}()
