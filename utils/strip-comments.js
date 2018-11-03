@@ -7,7 +7,7 @@ module.exports = function (src) {
 		const next2 = src.slice(pos, pos + 2)
 		if (next2 === '//') {
 			const commentLn = src.slice(pos).indexOf('\n')
-			src = src.slice(0, pos) + src.slice(pos + commentLn + 1)
+			src = src.slice(0, pos) + src.slice(pos + commentLn)
 			continue
 		}
 		if (next2 === '/*') {
