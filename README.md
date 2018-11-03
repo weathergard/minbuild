@@ -26,4 +26,10 @@ Compile a javascript bundle as follows:
 minbuild ./my-project
 ```
 
-This creates a file at `./my-project/my-project.build.js`, containing the compiled output. Unused javascript files are not included in the build file.
+It will read the files and resolve the dependencies, and then report back:
+
+```
+my-project.build.js is 48.65KB from 18 files totaling ≈ 1940 SLOC.
+```
+
+The output file is placed inside the project directory. Unused javascript files are not included in the build file. You can save a little space by stripping comments with the `--remove-comments` flag.
